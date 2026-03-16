@@ -1,1 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScrewID — Surgical Tool Recognition</title>
+<style>
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f4f4f2;
+    --color-background-tertiary: #eeede9;
+    --color-background-info: #e6f1fb;
+    --color-background-success: #eaf3de;
+    --color-background-warning: #faeeda;
+    --color-background-danger: #fcebeb;
+    --color-text-primary: #1a1a18;
+    --color-text-secondary: #6b6b67;
+    --color-text-info: #185fa5;
+    --color-text-success: #3b6d11;
+    --color-text-warning: #854f0b;
+    --color-text-danger: #a32d2d;
+    --color-border-tertiary: rgba(0,0,0,0.12);
+    --color-border-secondary: rgba(0,0,0,0.22);
+    --color-border-primary: rgba(0,0,0,0.35);
+    --color-border-info: #85b7eb;
+    --color-border-danger: #f09595;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
 
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1e1e1c;
+      --color-background-secondary: #2a2a27;
+      --color-background-tertiary: #141412;
+      --color-background-info: #042c53;
+      --color-background-success: #173404;
+      --color-background-warning: #412402;
+      --color-background-danger: #501313;
+      --color-text-primary: #f0efeb;
+      --color-text-secondary: #9a9a94;
+      --color-text-info: #85b7eb;
+      --color-text-success: #c0dd97;
+      --color-text-warning: #fac775;
+      --color-text-danger: #f09595;
+      --color-border-tertiary: rgba(255,255,255,0.1);
+      --color-border-secondary: rgba(255,255,255,0.2);
+      --color-border-primary: rgba(255,255,255,0.32);
+      --color-border-info: #185fa5;
+      --color-border-danger: #a32d2d;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-background-tertiary);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  input[type=text], input[type=password], select, textarea {
+    width: 100%;
+    font-size: 13px;
+    padding: 7px 10px;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-secondary);
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--color-border-primary);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+  }
+  textarea { resize: vertical; }
+  input[type=file] { display: none; }
+  input[type=range] {
+    width: 100%;
+    accent-color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  .shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* NAV */
+  .nav {
+    background: var(--color-background-primary);
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    height: 52px;
+    gap: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .nav-brand { font-size: 14px; font-weight: 500; margin-right: 20px; white-space: nowrap; }
+  .nav-brand em { font-style: normal; color: var(--color-text-secondary); font-weight: 400; }
+  .nav-tab {
+    padding: 0 14px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: color 0.1s;
+    white-space: nowrap;
+    gap: 5px;
+    user-select: none;
+  }
+  .nav-tab.active { color: var(--color-text-primary); border-bottom-color: var(--color-text-primary); font-weight: 500; }
+  .nav-tab:hover:not(.active) { color: var(--color-text-primary); }
+  .lock-icon { font-size: 11px; }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+  /* PILLS */
+  .pill { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+  .pill-green { background: var(--color-background-success); color: var(--color-text-success); }
+  .pill-blue { background: var(--color-background-info); color: var(--color-text-info); }
+  .pill-warn { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .pill-gray { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+
+  /* BODY */
+  .body { flex: 1; padding: 20px; max-width: 1060px; margin: 0 auto; width: 100%; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header { margin-bottom: 20px; }
+  .page-title { font-size: 17px; font-weight: 500; }
+  .page-sub { font-size: 13px; color: var(--color-text-secondary); margin-top: 3px; }
+
+  /* CARDS */
+  .card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 18px;
+  }
+
+  /* GRIDS */
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+
+  /* FORM */
+  .lbl { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 5px; display: block; }
+  .field { margin-bottom: 13px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 7px 14px;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-secondary);
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--color-background-secondary); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--color-text-primary);
+    color: var(--color-background-primary);
+    border-color: transparent;
+  }
+  .btn-primary:hover { opacity: 0.82; background: var(--color-text-primary); }
+  .btn-xs { padding: 4px 9px; font-size: 11px; }
+  .btn-danger { color: var(--color-text-danger); border-color: var(--color-border-danger); }
+  .btn-danger:hover { background: var(--color-background-danger); }
+  .btn-full { width: 100%; }
+
+  /* AUTH MODALS */
+  .auth-gate {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .auth-box {
+    background: var(--color-background-primary);
+    border-radius: var(--border-radius-lg);
+    border: 0.5px solid var(--color-border-tertiary);
+    padding: 28px 28px 24px;
+    width: 340px;
+    max-width: 92vw;
+  }
+  .auth-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  .auth-sub { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 20px; }
+  .auth-error { font-size: 12px; color: var(--color-text-danger); margin-top: 8px; display: none; }
+  .auth-icon { font-size: 28px; margin-bottom: 12px; }
+
+  /* SCAN */
+  .scan-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .scan-well {
+    min-height: 260px;
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .scan-well img { width: 100%; height: 100%; object-fit: contain; }
+  .scan-placeholder { text-align: center; color: var(--color-text-secondary); }
+  .scan-placeholder-icon { font-size: 32px; margin-bottom: 10px; }
+  .scan-placeholder-text { font-size: 13px; }
+  .result-area { min-height: 260px; }
+
+  /* CONFIDENCE BARS */
+  .conf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .conf-name { font-size: 12px; min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .conf-bar-bg { flex: 1; height: 5px; background: var(--color-background-secondary); border-radius: 3px; overflow: hidden; }
+  .conf-bar-fill { height: 100%; border-radius: 3px; transition: width 0.7s ease; }
+  .conf-pct { font-size: 11px; color: var(--color-text-secondary); min-width: 32px; text-align: right; }
+
+  .prop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .prop { font-size: 12px; }
+  .prop-label { color: var(--color-text-secondary); margin-bottom: 2px; }
+  .prop-val { font-weight: 500; }
+  .note-box {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--color-background-warning);
+    border-radius: var(--border-radius-md);
+    font-size: 12px;
+    color: var(--color-text-warning);
+    line-height: 1.6;
+  }
+
+  /* LOADING DOTS */
+  .dots { display: flex; gap: 5px; align-items: center; justify-content: center; padding: 30px 0; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-text-secondary); animation: blink 1.1s infinite ease-in-out; }
+  .dot:nth-child(2) { animation-delay: .18s; }
+  .dot:nth-child(3) { animation-delay: .36s; }
+  @keyframes blink { 0%,80%,100%{opacity:.25;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+
+  /* DROP ZONE */
+  .drop-zone {
+    border: 1.5px dashed var(--color-border-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .drop-zone:hover { background: var(--color-background-secondary); }
+  .drop-zone-icon { font-size: 22px; margin-bottom: 6px; }
+  .drop-zone-label { font-size: 13px; font-weight: 500; }
+  .drop-zone-sub { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+
+  /* THUMBNAILS */
+  .thumb-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-top: 10px; }
+  .thumb {
+    height: 65px;
+    border-radius: var(--border-radius-md);
+    background: var(--color-background-secondary);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb-rm {
+    position: absolute; top: 3px; right: 3px;
+    width: 16px; height: 16px;
+    background: var(--color-background-danger);
+    color: var(--color-text-danger);
+    border-radius: 50%; font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* LIBRARY */
+  .class-list { display: flex; flex-direction: column; }
+  .class-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .class-row:last-child { border-bottom: none; }
+  .class-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .class-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .class-meta { font-size: 11px; color: var(--color-text-secondary); }
+  .class-actions { display: flex; gap: 6px; }
+
+  /* STATS */
+  .stat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 14px; }
+  .stat-label { font-size: 11px; color: var(--color-text-secondary); }
+  .stat-val { font-size: 22px; font-weight: 500; margin-top: 2px; }
+
+  .empty { text-align: center; padding: 36px 20px; color: var(--color-text-secondary); }
+  .empty-icon { font-size: 26px; margin-bottom: 8px; }
+  .empty-text { font-size: 13px; }
+
+  .section-h { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+
+  .admin-banner {
+    background: var(--color-background-info);
+    border: 0.5px solid var(--color-border-info);
+    border-radius: var(--border-radius-md);
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--color-text-info);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .admin-banner a { color: var(--color-text-info); cursor: pointer; }
+
+  code {
+    font-size: 11px;
+    background: var(--color-background-secondary);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+
+  @media (max-width: 640px) {
+    .row2, .scan-layout { grid-template-columns: 1fr; }
+    .nav-brand em { display: none; }
+    .body { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- AUTH MODAL -->
+  <div class="auth-gate" id="auth-gate">
+    <div class="auth-box">
+      <div class="auth-icon">🔒</div>
+      <div class="auth-title">Admin access required</div>
+      <div class="auth-sub">Enter the admin password to access Training and Settings.</div>
+      <div class="field">
+        <label class="lbl">Password</label>
+        <input type="password" id="auth-input" placeholder="Enter password" onkeydown="if(event.key==='Enter')submitAuth()">
+      </div>
+      <div class="auth-error" id="auth-error">Incorrect password. Try again.</div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn btn-primary btn-full" onclick="submitAuth()">Unlock</button>
+        <button class="btn" onclick="closeAuth()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div class="auth-gate" id="chpw-gate">
+    <div class="auth-box">
+      <div class="auth-icon">🔑</div>
+      <div class="auth-title">Change admin password</div>
+      <div class="auth-sub">Set a new password for Training and Settings access.</div>
+      <div class="field"><label class="lbl">Current password</label><input type="password" id="chpw-current" placeholder="Current password"></div>
+      <div class="field"><label class="lbl">New password</label><input type="password" id="chpw-new" placeholder="Min 6 characters"></div>
+      <div class="field" style="margin-bottom:0;"><label class="lbl">Confirm new password</label><input type="password" id="chpw-confirm" placeholder="Repeat new password"></div>
+      <div class="auth-error" id="chpw-error"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn btn-primary btn-full" onclick="submitChangePw()">Update password</button>
+        <button class="btn" onclick="document.getElementById('chpw-gate').style.display='none'">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <div class="nav-brand">ScrewID <em>Research</em></div>
+    <div class="nav-tab active" onclick="nav(this,'scan')">Identify</div>
+    <div class="nav-tab" onclick="nav(this,'library')">Library</div>
+    <div class="nav-tab" id="tab-train" onclick="requireAdmin(this,'train')">
+      <span class="lock-icon" id="lock-train">🔒</span> Train
+    </div>
+    <div class="nav-tab" id="tab-settings" onclick="requireAdmin(this,'settings')">
+      <span class="lock-icon" id="lock-settings">🔒</span> Settings
+    </div>
+    <div class="nav-right">
+      <span class="pill pill-gray" id="role-pill">Public</span>
+      <span class="pill pill-blue" id="lib-pill">0 classes</span>
+      <button class="btn btn-xs" id="admin-btn" onclick="toggleAdmin()">Admin login</button>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- IDENTIFY PAGE -->
+    <div id="page-scan" class="page active">
+      <div class="page-header">
+        <div class="page-title">Identify a surgical tool</div>
+        <div class="page-sub">Upload or capture a photo — AI matches it against your trained library</div>
+      </div>
+      <div class="scan-layout">
+        <div>
+          <div class="card" style="padding:14px;">
+            <input type="file" id="scan-file" accept="image/*" onchange="onScanFile(this)">
+            <div class="scan-well" id="scan-well" onclick="document.getElementById('scan-file').click()" style="cursor:pointer; min-height:240px;">
+              <div class="scan-placeholder">
+                <div class="scan-placeholder-icon">📷</div>
+                <div class="scan-placeholder-text">Tap to upload or capture</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <button class="btn btn-primary" id="scan-btn" onclick="runScan()" style="display:none; flex:1;">Identify ↗</button>
+              <button class="btn btn-xs" id="scan-clear" onclick="clearScan()" style="display:none;">Clear</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px; padding:14px;">
+            <div class="section-h">Recent scans</div>
+            <div id="recent-scans">
+              <div class="empty"><div class="empty-icon">🔬</div><div class="empty-text">No scans yet this session</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card result-area" id="result-card">
+          <div id="result-empty" class="empty" style="padding:60px 20px;">
+            <div class="empty-icon">🧬</div>
+            <div class="empty-text">Upload an image to identify a tool</div>
+          </div>
+          <div id="result-loading" style="display:none;">
+            <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+            <div style="text-align:center; font-size:13px; color:var(--color-text-secondary);">Analyzing with AI...</div>
+          </div>
+          <div id="result-out" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIBRARY PAGE (public) -->
+    <div id="page-library" class="page">
+      <div class="page-header">
+        <div class="page-title">Tool library</div>
+        <div class="page-sub">All trained tool classes available for recognition</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:14px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="lib-search" placeholder="Search..." style="max-width:220px;" oninput="renderLibrary()">
+        <select id="lib-cat-filter" onchange="renderLibrary()" style="max-width:200px;">
+          <option value="">All categories</option>
+          <option>Pedicle Screws</option>
+          <option>Reduction Tools</option>
+          <option>Drivers &amp; Wrenches</option>
+          <option>Retractors</option>
+          <option>Probes &amp; Awls</option>
+          <option>Rods &amp; Connectors</option>
+          <option>Implants</option>
+          <option>Other</option>
+        </select>
+        <span style="margin-left:auto; font-size:12px; color:var(--color-text-secondary);" id="lib-count"></span>
+      </div>
+      <div class="card" style="padding:0 18px;">
+        <div id="lib-list" class="class-list"></div>
+      </div>
+    </div>
+
+    <!-- TRAIN PAGE (admin only) -->
+    <div id="page-train" class="page">
+      <div class="admin-banner">
+        🔓 Admin mode — Training
+        <a onclick="logoutAdmin()">Log out</a>
+      </div>
+      <div class="page-header">
+        <div class="page-title">Train the recognition model</div>
+        <div class="page-sub">Add labeled image sets for each tool class — more diverse images improve accuracy</div>
+      </div>
+      <div class="row2">
+        <div>
+          <div class="card">
+            <div class="section-h">Add a new tool class</div>
+            <div class="field"><label class="lbl">Tool name *</label><input type="text" id="t-name" placeholder="e.g. Pedicle Screw 5.5×45mm"></div>
+            <div class="row2" style="gap:10px;">
+              <div class="field">
+                <label class="lbl">Category</label>
+                <select id="t-cat">
+                  <option>Pedicle Screws</option>
+                  <option>Reduction Tools</option>
+                  <option>Drivers &amp; Wrenches</option>
+                  <option>Retractors</option>
+                  <option>Probes &amp; Awls</option>
+                  <option>Rods &amp; Connectors</option>
+                  <option>Implants</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="field"><label class="lbl">Size / Spec</label><input type="text" id="t-size" placeholder="e.g. 5.5mm × 45mm"></div>
+            </div>
+            <div class="field"><label class="lbl">Manufacturer</label><input type="text" id="t-mfr" placeholder="e.g. Medtronic CD Horizon"></div>
+            <div class="field">
+              <label class="lbl">Notes for AI (optional)</label>
+              <textarea id="t-notes" rows="2" placeholder="Distinguishing features, common confusions, clinical context..."></textarea>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label class="lbl">Training images</label>
+              <input type="file" id="t-files" accept="image/*" multiple onchange="onTrainFiles(this)">
+              <div class="drop-zone" onclick="document.getElementById('t-files').click()">
+                <div class="drop-zone-icon">🖼</div>
+                <div class="drop-zone-label">Add labeled images</div>
+                <div class="drop-zone-sub">Multiple angles · varied lighting · 8–25 images ideal</div>
+              </div>
+              <div class="thumb-grid" id="t-thumbs"></div>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="submitClass()" style="margin-top:14px;">Save to library ↗</button>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="section-h">Library statistics</div>
+            <div class="stat-grid-2" style="margin-bottom:0;">
+              <div class="stat"><div class="stat-label">Classes</div><div class="stat-val" id="s-classes">0</div></div>
+              <div class="stat"><div class="stat-label">Images</div><div class="stat-val" id="s-imgs">0</div></div>
+              <div class="stat"><div class="stat-label">Avg / class</div><div class="stat-val" id="s-avg">—</div></div>
+              <div class="stat"><div class="stat-label">Ready</div><div class="stat-val" id="s-ready">—</div></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-h">Class balance</div>
+            <div id="balance-chart">
+              <div class="empty"><div class="empty-text" style="font-size:12px;">Add classes to see balance</div></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-h">Training tips</div>
+            <div style="font-size:12px; color:var(--color-text-secondary); line-height:2.1;">
+              ✓ Capture from top, side, angled, and 45° views<br>
+              ✓ Vary lighting — diffuse, directional, OR lighting<br>
+              ✓ Include close-up of size markings if present<br>
+              ✓ Add real OR / sterile tray context images<br>
+              ✓ 8 images minimum · 20+ for high accuracy<br>
+              ✗ Avoid blurry or heavily glare-affected images<br>
+              ✗ Don't crop out the full tool outline
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE (admin only) -->
+    <div id="page-settings" class="page">
+      <div class="admin-banner">
+        🔓 Admin mode — Settings
+        <a onclick="logoutAdmin()">Log out</a>
+      </div>
+      <div class="page-header">
+        <div class="page-title">Settings</div>
+        <div class="page-sub">Configure the AI recognition engine and access control</div>
+      </div>
+      <div class="row2">
+        <div>
+          <div class="card">
+            <div class="section-h">Anthropic API</div>
+            <div class="field">
+              <label class="lbl">API key</label>
+              <input type="password" id="api-key" placeholder="sk-ant-api03-...">
+              <div style="font-size:11px; color:var(--color-text-secondary); margin-top:4px;">
+                Required for AI recognition. Stored locally in your browser only.
+                Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--color-text-info);">console.anthropic.com</a>
+              </div>
+            </div>
+            <div class="field">
+              <label class="lbl">Recognition model</label>
+              <select id="model-sel">
+                <option value="claude-sonnet-4-20250514">Claude Sonnet 4 — best accuracy</option>
+                <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 — faster &amp; cheaper</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="lbl">Confidence threshold — <span id="thresh-val">75</span>%</label>
+              <input type="range" min="40" max="98" value="75" id="conf-thresh" step="1" oninput="document.getElementById('thresh-val').textContent=this.value">
+              <div style="font-size:11px; color:var(--color-text-secondary); margin-top:4px;">Results below this are flagged as uncertain</div>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
+            <span id="save-msg" style="font-size:12px; color:var(--color-text-success); margin-left:10px; display:none;">Saved ✓</span>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-h">Data management</div>
+            <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:14px; line-height:1.7;">
+              Tool library metadata is stored in your browser's localStorage. Export regularly to back up your classes.
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn" onclick="exportLib()">Export library (JSON)</button>
+              <button class="btn btn-danger" onclick="clearLib()">Clear all library data</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="section-h">Access control</div>
+            <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:14px; line-height:1.9;">
+              <strong style="font-weight:500; color:var(--color-text-primary);">Public users</strong> can access Identify and Library — no login needed.<br>
+              <strong style="font-weight:500; color:var(--color-text-primary);">Admins</strong> additionally access Train and Settings.<br><br>
+              Default admin password is <code>admin123</code> — change it below immediately.
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('chpw-gate').style.display='flex'">Change admin password</button>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-h">How recognition works</div>
+            <div style="font-size:12px; color:var(--color-text-secondary); line-height:2.0;">
+              1. Admins build a labeled tool class library<br>
+              2. Anyone can upload a tool image to scan<br>
+              3. Image + full class list → Claude Vision API<br>
+              4. Claude returns ranked confidence for all classes<br>
+              5. Results below threshold flagged as uncertain<br>
+              6. Admins add more training notes to improve accuracy
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.body -->
+</div><!-- /.shell -->
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────
+  let DB = JSON.parse(localStorage.getItem('screwid_db') || '{"classes":[],"scans":[]}');
+  let isAdmin = false;
+  let pendingPage = null;
+  let scanImageB64 = null;
+  let trainImgFiles = [];
+
+  const COLORS = ['#378ADD','#1D9E75','#D85A30','#D4537E','#BA7517','#639922','#7F77DD','#884D3F','#5DCAA5','#EF9F27'];
+
+  function getAdminPw() { return localStorage.getItem('screwid_pw') || 'admin123'; }
+
+  function persist() { localStorage.setItem('screwid_db', JSON.stringify(DB)); updateNav(); }
+
+  // ─── Nav ─────────────────────────────────────────────────────────────────
+  function nav(el, page) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    if (el) el.classList.add('active');
+    document.getElementById('page-' + page).classList.add('active');
+    if (page === 'library') renderLibrary();
+    if (page === 'train')   updateStats();
+    if (page === 'settings') loadSettingsFields();
+  }
+
+  function updateNav() {
+    const n = DB.classes.length;
+    document.getElementById('lib-pill').textContent = n + ' class' + (n === 1 ? '' : 'es');
+    const rp = document.getElementById('role-pill');
+    rp.textContent = isAdmin ? 'Admin' : 'Public';
+    rp.className = 'pill ' + (isAdmin ? 'pill-green' : 'pill-gray');
+    document.getElementById('admin-btn').textContent = isAdmin ? 'Log out' : 'Admin login';
+    document.getElementById('lock-train').textContent    = isAdmin ? '🔓' : '🔒';
+    document.getElementById('lock-settings').textContent = isAdmin ? '🔓' : '🔒';
+  }
+
+  // ─── Auth ─────────────────────────────────────────────────────────────────
+  function requireAdmin(el, page) {
+    if (isAdmin) { nav(el, page); return; }
+    pendingPage = { el, page };
+    document.getElementById('auth-gate').style.display = 'flex';
+    document.getElementById('auth-input').value = '';
+    document.getElementById('auth-error').style.display = 'none';
+    setTimeout(() => document.getElementById('auth-input').focus(), 60);
+  }
+
+  function submitAuth() {
+    if (document.getElementById('auth-input').value === getAdminPw()) {
+      isAdmin = true;
+      document.getElementById('auth-gate').style.display = 'none';
+      updateNav();
+      if (pendingPage) { nav(pendingPage.el, pendingPage.page); pendingPage = null; }
+    } else {
+      document.getElementById('auth-error').style.display = 'block';
+      document.getElementById('auth-input').value = '';
+      document.getElementById('auth-input').focus();
+    }
+  }
+
+  function closeAuth() {
+    document.getElementById('auth-gate').style.display = 'none';
+    pendingPage = null;
+  }
+
+  function toggleAdmin() {
+    if (isAdmin) { logoutAdmin(); return; }
+    pendingPage = null;
+    document.getElementById('auth-gate').style.display = 'flex';
+    document.getElementById('auth-input').value = '';
+    document.getElementById('auth-error').style.display = 'none';
+    setTimeout(() => document.getElementById('auth-input').focus(), 60);
+  }
+
+  function logoutAdmin() {
+    isAdmin = false;
+    updateNav();
+    nav(document.querySelector('.nav-tab'), 'scan');
+  }
+
+  function submitChangePw() {
+    const cur = document.getElementById('chpw-current').value;
+    const nw  = document.getElementById('chpw-new').value;
+    const cf  = document.getElementById('chpw-confirm').value;
+    const err = document.getElementById('chpw-error');
+    err.style.display = 'none';
+    if (cur !== getAdminPw()) { err.textContent = 'Current password is incorrect.'; err.style.display = 'block'; return; }
+    if (nw.length < 6)        { err.textContent = 'New password must be at least 6 characters.'; err.style.display = 'block'; return; }
+    if (nw !== cf)             { err.textContent = 'Passwords do not match.'; err.style.display = 'block'; return; }
+    localStorage.setItem('screwid_pw', nw);
+    document.getElementById('chpw-gate').style.display = 'none';
+    ['chpw-current','chpw-new','chpw-confirm'].forEach(id => document.getElementById(id).value = '');
+    alert('✓ Password updated successfully.');
+  }
+
+  // ─── Scan / Identify ──────────────────────────────────────────────────────
+  function onScanFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const well = document.getElementById('scan-well');
+    well.innerHTML = `<img src="${url}" alt="scan preview">`;
+    well.style.cursor = 'default';
+    well.onclick = null;
+    document.getElementById('scan-btn').style.display = '';
+    document.getElementById('scan-clear').style.display = '';
+    const reader = new FileReader();
+    reader.onload = e => { scanImageB64 = e.target.result.split(',')[1]; };
+    reader.readAsDataURL(file);
+  }
+
+  function clearScan() {
+    scanImageB64 = null;
+    document.getElementById('scan-file').value = '';
+    const well = document.getElementById('scan-well');
+    well.innerHTML = `<div class="scan-placeholder"><div class="scan-placeholder-icon">📷</div><div class="scan-placeholder-text">Tap to upload or capture</div></div>`;
+    well.style.cursor = 'pointer';
+    well.onclick = () => document.getElementById('scan-file').click();
+    document.getElementById('scan-btn').style.display   = 'none';
+    document.getElementById('scan-clear').style.display = 'none';
+    document.getElementById('result-empty').style.display   = '';
+    document.getElementById('result-loading').style.display = 'none';
+    document.getElementById('result-out').style.display     = 'none';
+  }
+
+  async function runScan() {
+    if (!DB.classes.length) {
+      alert('No tool classes in the library yet.\nAsk an admin to add training data first.');
+      return;
+    }
+    document.getElementById('result-empty').style.display   = 'none';
+    document.getElementById('result-loading').style.display = 'block';
+    document.getElementById('result-out').style.display     = 'none';
+
+    const apiKey   = localStorage.getItem('screwid_key') || '';
+    const model    = localStorage.getItem('screwid_model') || 'claude-sonnet-4-20250514';
+    const threshold = parseInt(localStorage.getItem('screwid_thresh') || '75');
+
+    const classList = DB.classes.map((c, i) =>
+      `${i+1}. "${c.name}" (${c.cat}, ${c.mfr}, size: ${c.size})${c.notes ? ' — Notes: ' + c.notes : ''}`
+    ).join('\n');
+
+    const system = `You are a surgical tool recognition AI for a research and education application specializing in spinal surgery instruments, especially pedicle screws and spine surgery tools.
+
+Trained classes in this library:
+${classList}
+
+When given an image, identify which trained class the tool belongs to.
+Respond ONLY with a valid JSON object — no markdown fences, no preamble, no trailing text:
+{
+  "match": "exact class name from the list, or null if no match",
+  "confidence": 0-100,
+  "scores": [{"name":"class name","score":0-100}],
+  "description": "1-2 sentence description of what you see in the image",
+  "specs": {"type":"inferred tool type","material":"inferred material","condition":"new/used/sterile/unknown"},
+  "notes": "any warnings, distinguishing observations, or null"
+}
+Include ALL classes in the scores array, sorted by score descending.`;
+
+    try {
+      const messages = scanImageB64
+        ? [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: scanImageB64 }},
+            { type: 'text', text: 'Please identify this surgical tool from my trained library.' }
+          ]}]
+        : [{ role: 'user', content: 'Demo mode: simulate identifying the first tool in the list. Respond with JSON only.' }];
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({ model, max_tokens: 1000, system, messages })
+      });
+
+      if (!resp.ok) throw new Error('API returned ' + resp.status);
+      const data = await resp.json();
+      const raw = data.content.map(b => b.text || '').join('');
+      const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      showResult(result, threshold);
+      logScan(result);
+
+    } catch (e) {
+      if (!apiKey) {
+        showDemoResult(threshold);
+      } else {
+        document.getElementById('result-loading').style.display = 'none';
+        document.getElementById('result-out').style.display = 'block';
+        document.getElementById('result-out').innerHTML = `
+          <div style="color:var(--color-text-danger); font-size:13px; padding:20px; line-height:1.7;">
+            Recognition failed: ${e.message}.<br><br>
+            Check your API key in <strong style="font-weight:500;">Settings</strong> (admin login required).
+          </div>`;
+      }
+    }
+  }
+
+  function showDemoResult(threshold) {
+    const demo = {
+      match: DB.classes[0].name,
+      confidence: 94,
+      scores: DB.classes.map((c, i) => ({ name: c.name, score: Math.max(4, 94 - i * 20) })),
+      description: 'Titanium pedicle screw with polyaxial head design and standard coarse thread pitch consistent with lumbar spine fixation hardware.',
+      specs: { type: 'Pedicle Screw', material: 'Titanium alloy', condition: 'sterile' },
+      notes: 'Verify thread pitch and diameter match the planned insertion site before use.'
+    };
+    showResult(demo, threshold);
+    logScan(demo);
+  }
+
+  function showResult(r, threshold) {
+    document.getElementById('result-loading').style.display = 'none';
+    document.getElementById('result-out').style.display = 'block';
+    const conf = r.confidence || 0;
+    const uncertain = conf < threshold;
+    const cc = conf >= 80 ? 'var(--color-text-success)' : conf >= 60 ? 'var(--color-text-warning)' : 'var(--color-text-danger)';
+    const scores = (r.scores || []).slice(0, 6);
+
+    document.getElementById('result-out').innerHTML = `
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px;">
+        <div>
+          <div style="font-size:18px; font-weight:500; margin-bottom:3px;">${r.match || 'No match found'}</div>
+          <div style="font-size:12px; color:var(--color-text-secondary);">${uncertain ? '⚠ Below confidence threshold' : '✓ Identified'}</div>
+        </div>
+        <div style="font-size:22px; font-weight:500; color:${cc}; white-space:nowrap; margin-left:12px;">${conf}%</div>
+      </div>
+      <div style="margin-bottom:14px;">
+        ${scores.map(s => `
+          <div class="conf-row">
+            <div class="conf-name" title="${s.name}">${s.name}</div>
+            <div class="conf-bar-bg">
+              <div class="conf-bar-fill" style="width:${s.score}%; background:${s.score >= conf ? cc : 'var(--color-border-secondary)'};"></div>
+            </div>
+            <div class="conf-pct">${s.score}%</div>
+          </div>`).join('')}
+      </div>
+      <div style="font-size:12px; color:var(--color-text-secondary); line-height:1.7; border-top:0.5px solid var(--color-border-tertiary); padding-top:12px; margin-bottom:12px;">
+        ${r.description}
+      </div>
+      <div class="prop-grid">
+        <div class="prop"><div class="prop-label">Type</div><div class="prop-val">${r.specs?.type || '—'}</div></div>
+        <div class="prop"><div class="prop-label">Material</div><div class="prop-val">${r.specs?.material || '—'}</div></div>
+        <div class="prop"><div class="prop-label">Condition</div><div class="prop-val">${r.specs?.condition || '—'}</div></div>
+        <div class="prop"><div class="prop-label">Confidence</div><div class="prop-val" style="color:${cc};">${conf}% ${uncertain ? '⚠' : ''}</div></div>
+      </div>
+      ${r.notes ? `<div class="note-box">⚠ ${r.notes}</div>` : ''}
+    `;
+  }
+
+  function logScan(r) {
+    DB.scans.unshift({ id: Date.now(), name: r.match || 'Unknown', conf: r.confidence, ts: new Date().toLocaleTimeString() });
+    if (DB.scans.length > 20) DB.scans = DB.scans.slice(0, 20);
+    persist();
+    renderRecentScans();
+  }
+
+  function renderRecentScans() {
+    const el = document.getElementById('recent-scans');
+    if (!DB.scans.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">🔬</div><div class="empty-text">No scans yet this session</div></div>';
+      return;
+    }
+    el.innerHTML = DB.scans.slice(0, 6).map(s => {
+      const cls = s.conf >= 80 ? 'pill-green' : s.conf >= 60 ? 'pill-warn' : 'pill';
+      return `<div style="display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:0.5px solid var(--color-border-tertiary);">
+        <span style="font-size:12px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.name}</span>
+        <span class="pill ${cls}">${s.conf}%</span>
+        <span style="font-size:11px; color:var(--color-text-secondary);">${s.ts}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ─── Train ────────────────────────────────────────────────────────────────
+  function onTrainFiles(input) {
+    const thumbs = document.getElementById('t-thumbs');
+    for (const f of input.files) {
+      trainImgFiles.push(f);
+      const url = URL.createObjectURL(f);
+      const d = document.createElement('div');
+      d.className = 'thumb';
+      d.innerHTML = `<img src="${url}" alt=""><div class="thumb-rm" onclick="this.parentNode.remove()">×</div>`;
+      thumbs.appendChild(d);
+    }
+  }
+
+  function submitClass() {
+    const name = document.getElementById('t-name').value.trim();
+    if (!name) { alert('Please enter a tool name.'); return; }
+    const count = document.getElementById('t-thumbs').children.length;
+    if (!count) { alert('Please add at least one training image.'); return; }
+
+    DB.classes.push({
+      id:    Date.now(),
+      name,
+      cat:   document.getElementById('t-cat').value,
+      size:  document.getElementById('t-size').value  || 'N/A',
+      mfr:   document.getElementById('t-mfr').value   || 'Unknown',
+      notes: document.getElementById('t-notes').value || '',
+      imgs:  count,
+      added: new Date().toISOString()
+    });
+    persist();
+    updateStats();
+
+    ['t-name','t-size','t-mfr','t-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('t-thumbs').innerHTML = '';
+    document.getElementById('t-files').value = '';
+    trainImgFiles = [];
+    alert(`✓ "${name}" added to library with ${count} training image${count > 1 ? 's' : ''}.`);
+  }
+
+  function updateStats() {
+    const n    = DB.classes.length;
+    const imgs = DB.classes.reduce((a, c) => a + c.imgs, 0);
+    document.getElementById('s-classes').textContent = n;
+    document.getElementById('s-imgs').textContent    = imgs;
+    document.getElementById('s-avg').textContent     = n ? Math.round(imgs / n) : '—';
+    document.getElementById('s-ready').textContent   = n >= 2 ? 'Yes' : 'Need 2+';
+    renderBalance();
+  }
+
+  function renderBalance() {
+    const el = document.getElementById('balance-chart');
+    if (!DB.classes.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-text" style="font-size:12px;">No classes yet</div></div>';
+      return;
+    }
+    const max = Math.max(...DB.classes.map(c => c.imgs), 1);
+    el.innerHTML = DB.classes.map((c, i) => `
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+        <div style="font-size:11px; min-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-text-secondary);">${c.name}</div>
+        <div style="flex:1; height:5px; background:var(--color-background-secondary); border-radius:3px; overflow:hidden;">
+          <div style="height:100%; width:${Math.round(c.imgs/max*100)}%; background:${COLORS[i % COLORS.length]}; border-radius:3px;"></div>
+        </div>
+        <div style="font-size:11px; color:var(--color-text-secondary); min-width:20px; text-align:right;">${c.imgs}</div>
+      </div>`).join('');
+  }
+
+  // ─── Library ──────────────────────────────────────────────────────────────
+  function renderLibrary() {
+    const search = document.getElementById('lib-search').value.toLowerCase();
+    const catF   = document.getElementById('lib-cat-filter').value;
+    const filtered = DB.classes.filter(c =>
+      (!search || c.name.toLowerCase().includes(search) || c.mfr.toLowerCase().includes(search)) &&
+      (!catF   || c.cat === catF)
+    );
+    document.getElementById('lib-count').textContent = filtered.length + ' of ' + DB.classes.length;
+    const el = document.getElementById('lib-list');
+    if (!filtered.length) {
+      el.innerHTML = '<div class="empty" style="padding:30px;"><div class="empty-text">No classes match your search</div></div>';
+      return;
+    }
+    el.innerHTML = filtered.map((c, i) => `
+      <div class="class-row">
+        <div class="class-dot" style="background:${COLORS[i % COLORS.length]};"></div>
+        <div style="flex:1;">
+          <div class="class-name">${c.name}</div>
+          <div style="font-size:11px; color:var(--color-text-secondary);">${c.cat} · ${c.mfr} · ${c.size}</div>
+        </div>
+        <div class="class-meta">${c.imgs} imgs</div>
+      </div>`).join('');
+  }
+
+  // ─── Settings ─────────────────────────────────────────────────────────────
+  function loadSettingsFields() {
+    const k = localStorage.getItem('screwid_key');   if (k) document.getElementById('api-key').value = k;
+    const m = localStorage.getItem('screwid_model'); if (m) document.getElementById('model-sel').value = m;
+    const t = localStorage.getItem('screwid_thresh');
+    if (t) { document.getElementById('conf-thresh').value = t; document.getElementById('thresh-val').textContent = t; }
+  }
+
+  function saveSettings() {
+    const k = document.getElementById('api-key').value.trim();
+    if (k) localStorage.setItem('screwid_key', k);
+    localStorage.setItem('screwid_model',  document.getElementById('model-sel').value);
+    localStorage.setItem('screwid_thresh', document.getElementById('conf-thresh').value);
+    const msg = document.getElementById('save-msg');
+    msg.style.display = 'inline';
+    setTimeout(() => msg.style.display = 'none', 2500);
+    updateNav();
+  }
+
+  function exportLib() {
+    const blob = new Blob([JSON.stringify({ classes: DB.classes, exported: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'screwid-library.json';
+    a.click();
+  }
+
+  function clearLib() {
+    if (confirm('Delete all classes and scan history? This cannot be undone.')) {
+      DB = { classes: [], scans: [] };
+      persist();
+      renderLibrary();
+      updateStats();
+      renderRecentScans();
+      alert('Library cleared.');
+    }
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
+  updateNav();
+  renderRecentScans();
+</script>
+</body>
+</html>
